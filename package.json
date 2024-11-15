@@ -1,0 +1,19 @@
+{
+  "name": "wildberries",
+  "version": "1.0.0",
+  "description": "",
+  "source": "index.html",
+  "scripts": {
+    "start": "parcel src/index.html --open",
+    "build": "parcel build src/index.html"
+  },
+  "author": "",
+  "license": "ISC",
+  "main": "index.js",
+  "keywords": [],
+  "devDependencies": {
+    "@parcel/transformer-sass": "^2.13.0",
+    "parcel": "^2.13.0",
+    "sass": "^1.81.0"
+  }
+}
