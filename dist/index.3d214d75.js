@@ -622,10 +622,13 @@ function createHeader() {
     searchInp.classList.add("search-inp");
     headerContainer.append(searchInp);
     basketBtn.classList.add("basket-btn");
-    basketBtn.textContent = "\u041A\u043E\u0440\u0437\u0438\u043D\u0430";
+    basketBtn.setAttribute("data-product-count", "0");
+    basketBtn.textContent = "";
     headerContainer.append(basketBtn);
-    const basketImg = document.getElementById("basket-img");
+    basketImg = document.createElement('div');
+    basketImg.classList.add("basket-img");
     basketBtn.append(basketImg);
+    headerContainer.append(basketBtn);
 }
 exports.default = createHeader;
 
@@ -664,12 +667,13 @@ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 function createCarousel() {
     const root = document.getElementById("root");
-    const carouselContainer = document.createElement("div");
+    const carouselContainer = document.createElement("section");
     carouselContainer.classList.add("carousel-container");
     root.append(carouselContainer);
     const leftCarouselBtn = document.createElement("button");
-    leftCarouselBtn.classList.add("carousel-btn");
-    leftCarouselBtn.textContent = "<";
+    leftCarouselBtn.classList.add("carousel-btn", "left");
+    const leftArrowImg = document.createElement("img");
+    leftCarouselBtn.appendChild(leftArrowImg);
     carouselContainer.append(leftCarouselBtn);
     const carousel = document.createElement("div");
     carousel.classList.add("carousel");
@@ -678,41 +682,105 @@ function createCarousel() {
     carouselLine.classList.add("carousel-line");
     carousel.append(carouselLine);
     const rightCarouselBtn = document.createElement("button");
-    rightCarouselBtn.classList.add("carousel-btn");
-    rightCarouselBtn.textContent = ">";
+    rightCarouselBtn.classList.add("carousel-btn", "right");
+    const rightArrowImg = document.createElement("img");
+    rightCarouselBtn.appendChild(rightArrowImg);
     carouselContainer.append(rightCarouselBtn);
-    fetch("https://67376867aafa2ef22233bb01.mockapi.io/el/carousel").then((response)=>response.json()).then((json)=>localStorage.setItem("image", JSON.stringify(json)));
-    const cardsArr = JSON.parse(localStorage.getItem("image"));
-    const carouselArr = [];
-    cardsArr.forEach((element)=>{
-        const carouselItem = element.avatar;
-        carouselArr.push(carouselItem);
+    fetch("https://67376867aafa2ef22233bb01.mockapi.io/el/carousel").then((response)=>{
+        // Проверяем, успешен ли ответ (код состояния в диапазоне 200-299)
+        if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
+        return response.json();
+    }).then((json)=>{
+        localStorage.setItem("image", JSON.stringify(json));
+        renderCarouselItem(); // Вызов функции рендеринга после получения данных
+    }).catch((error)=>{
+        console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 \u0434\u0430\u043D\u043D\u044B\u0445:", error);
     });
+    const carouselArr = [];
     function renderCarouselItem() {
-        carouselArr.forEach((element)=>{
-            const carouselImg = document.createElement("img");
-            carouselImg.classList.add("carousel-img");
-            carouselImg.src = element;
-            carouselLine.append(carouselImg);
+        const cardsArr = JSON.parse(localStorage.getItem("image"));
+        if (cardsArr) {
+            // Очистим carouselArr перед новым заполнением
+            carouselArr.length = 0;
+            cardsArr.forEach((element)=>{
+                const carouselItem = element.avatar;
+                carouselArr.push(carouselItem);
+            });
+            carouselArr.forEach((element)=>{
+                const carouselImg = document.createElement("img");
+                carouselImg.classList.add("carousel-img");
+                carouselImg.src = element;
+                carouselLine.append(carouselImg);
+            });
+            init(); // Вызов функции инициализации после рендеринга изображений
+        }
+    }
+    let count = 0;
+    let width;
+    function init() {
+        width = document.querySelector(".carousel").offsetWidth;
+        carouselLine.style.width = width * carouselArr.length + "px"; // Устанавливаем нужную ширину
+        const carouselImgs = document.querySelectorAll(".carousel-img");
+        carouselImgs.forEach((img)=>{
+            img.style.width = width + "px";
+            img.style.height = "auto";
         });
+        rollCarousel(); // Функция смещения при пересчете (фишка!!!)
+        updateIndicators(); // Обновляем индикаторы при инициализации
     }
-    renderCarouselItem();
-    let offset = 0;
-    function rightMove() {
-        offset += 100;
-        if (offset > 200) offset = 0;
-        carouselLine.style.left = -offset + "%";
+    window.addEventListener("resize", init);
+    // Обработчик нажатия кнопки "вправо"
+    rightCarouselBtn.addEventListener("click", function() {
+        count++;
+        if (count >= carouselArr.length) count = 0; // Вернуться к первой картинке, если достигли конца
+        rollCarousel();
+        updateIndicators(); // Обновляем индикаторы
+    });
+    // Обработчик нажатия кнопки "влево"
+    leftCarouselBtn.addEventListener("click", function() {
+        count--;
+        if (count < 0) count = carouselArr.length - 1; // Вернуться к последней картинке, если достигли начала
+        rollCarousel();
+        updateIndicators(); // Обновляем индикаторы
+    });
+    function rollCarousel() {
+        carouselLine.style.transform = "translate(-" + count * width + "px)";
     }
-    function leftMove() {
-        offset -= 100;
-        if (offset < 0) offset = 200;
-        carouselLine.style.left = -offset + "%";
+    // Создаем список индикаторов
+    const indicators = document.createElement("ol");
+    indicators.classList.add("carousel-indicators");
+    // Общее количество слайдов
+    const totalSlides = 3;
+    for(let i = 0; i < totalSlides; i++){
+        const indicator = document.createElement("li");
+        indicator.classList.add(`carousel-indicator-${i + 1}`); // Добавляем соответствующий класс
+        indicator.dataset.index = i; // Сохраняем индекс индикатора для навигации
+        if (i === 0) // Устанавливаем активный класс для первого индикатора
+        indicator.classList.add("active");
+        indicators.append(indicator); // Добавляем индикатор в список
     }
-    rightCarouselBtn.addEventListener("click", rightMove);
-    leftCarouselBtn.addEventListener("click", leftMove);
+    carouselContainer.append(indicators); // Добавляем индикаторы в слайдер
+    function updateIndicators() {
+        const indicatorElements = indicators.querySelectorAll("li");
+        // Удаляем активный класс у всех индикаторов
+        indicatorElements.forEach((indicator)=>{
+            indicator.classList.remove("active");
+        });
+        // Устанавливаем активный класс для текущего индикатора
+        indicatorElements[count].classList.add("active");
+    }
+    // Обработчик клика на индикаторах
+    indicators.addEventListener("click", (event)=>{
+        if (event.target.tagName === "LI") {
+            count = parseInt(event.target.dataset.index);
+            rollCarousel();
+            updateIndicators();
+        }
+    });
+    //Swipe 
     carousel.addEventListener("touchstart", handleTouchStart, false);
     carouselLine.addEventListener("touchmove", handleTouchMove, false);
-    let axisX = 0;
+    let axisX = 0; //хранения начального положения касания.
     function handleTouchStart(event) {
         const touches = event.touches[0];
         axisX = touches.clientX;
@@ -721,9 +789,9 @@ function createCarousel() {
         if (axisX == 0) return false;
         let moveX = event.touches[0].clientX;
         let xDiff = axisX - moveX;
-        if (xDiff > 0) rightMove();
-        else leftMove();
-        axisX = 0;
+        if (xDiff > 0) rightMove(); // Функция, которая отвечает за движение вправо
+        else leftMove(); // Функция, которая отвечает за движение влево
+        axisX = 0; // Сброс
     }
 }
 exports.default = createCarousel;
@@ -732,16 +800,20 @@ exports.default = createCarousel;
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var _header = require("./header");
+var _basket = require("./basket");
 function addCards() {
     const body = document.querySelector("body");
     const root = document.getElementById("root");
-    let productsInTheCart = [];
-    function addClass(element, elemClass) {
-        element.classList.add(elemClass);
+    (0, _header.basketBtn).setAttribute("data-product-count", "0");
+    //функция принимает элемент и набор классов, и добавляет эти классы к элементу
+    function addClass(element, ...elemClasses) {
+        elemClasses.forEach((elemClass)=>element.classList.add(elemClass));
     }
+    // Создание секции для продуктов
     const section = document.createElement("section");
     addClass(section, "products");
     root.appendChild(section);
+    //Создание контейнера
     const container = document.createElement("div");
     addClass(container, "container");
     section.appendChild(container);
@@ -749,16 +821,25 @@ function addCards() {
     addClass(sectionTitle, "products__title");
     sectionTitle.textContent = "\u0425\u0438\u0442\u044B \u043F\u0440\u043E\u0434\u0430\u0436";
     container.appendChild(sectionTitle);
+    //Создание модального окна
     const modalData = createModal();
     section.appendChild(modalData.modal);
+    //Создание контейнера для карточек продуктов
     const cardsContainer = document.createElement("div");
     addClass(cardsContainer, "products__container");
     container.appendChild(cardsContainer);
+    //Рендеринг карточек продуктов(на основе хранения либо локально, либо с удаленного источника)
     if (!localStorage.getItem("Products")) fetchDataAndRenderCards();
     else renderCardsFromLocalStorage();
+    //асинхронная функция для получения данных о товарах с API
     function fetchDataAndRenderCards() {
-        fetch("https://api.escuelajs.co/api/v1/products").then((response)=>response.json()).then((products)=>{
+        //метод fetch для выполнения HTTP-запроса на указанный URL, чтобы получить список продуктов
+        fetch("https://api.escuelajs.co/api/v1/products")//обработка ответа в формате json
+        .then((response)=>response.json())//получаем массив товаров
+        .then((products)=>{
+            //методом slice берем только первые 25 товаров из полученного списка
             products = products.slice(0, 25);
+            //в цикле происходит модификация каждого продукта, где добавляются новые свойства
             products.forEach((product)=>{
                 product.discount = Math.floor(Math.random() * 80) + 5;
                 product.discount_price = Math.ceil(product.price - product.price * product.discount / 100);
@@ -766,28 +847,37 @@ function addCards() {
                 product.evaluation = Math.floor(Math.random() * 42000 + 5000);
                 product.article = Math.floor(10000000 + Math.random() * 90000000);
             });
+            //сохранение данных в локальное хранилище в виде строки JSON,удобно для повторного переиспользования
             localStorage.setItem("Products", JSON.stringify(products));
+            //отображение карточек на стр
             renderCards(products);
-        }).catch((error)=>{
+        })//обработка ошибок
+        .catch((error)=>{
             console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 \u0434\u0430\u043D\u043D\u044B\u0445:", error);
         });
     }
+    //получение данных из localStorage(извлечение строки, которая была
+    //сохранена под ключом "Products" и преобразование ее обратно в объект JS(в массив объектов продуктов)
     function renderCardsFromLocalStorage() {
         const products = JSON.parse(localStorage.getItem("Products"));
         renderCards(products);
     }
+    //вызов функции для рендеринга (берёт массив продуктов и отвечает за их отображение на странице)
     function renderCards(products) {
         products.forEach((product)=>{
             const card = createCard(product);
             cardsContainer.appendChild(card);
         });
     }
+    //функция для создания карточки продукта
     function createCard(product) {
         const card = document.createElement("div");
         addClass(card, "product__card");
+        // Создаем основной контейнер для изображения продукта
         const imgWrapper = document.createElement("div");
         addClass(imgWrapper, "product__img-wrapper");
         const productImg = document.createElement("img");
+        // Используем то же изображение
         productImg.src = `${product.images[0]}`;
         addClass(productImg, "product__img");
         const quickViewBtn = document.createElement("button");
@@ -801,7 +891,7 @@ function addCards() {
         quickViewBtn.addEventListener("mouseenter", showQuickBtn);
         quickViewBtn.addEventListener("mouseleave", showQuickBtn);
         const productTitle = document.createElement("h2");
-        productTitle.textContent = ` ${product.title}`;
+        productTitle.textContent = `${product.title}`;
         productImg.alt = product.title;
         addClass(productTitle, "product__title");
         productTitle.append(name);
@@ -811,6 +901,7 @@ function addCards() {
         let evaluationCase;
         let evaluationLastSymbol = product.evaluation % 10;
         let evaluationLastTwoSymbols = product.evaluation % 100;
+        //логика для определения формы слова "оценка"
         if (evaluationLastTwoSymbols >= 11 && evaluationLastTwoSymbols <= 14 || evaluationLastSymbol === 0 || evaluationLastSymbol >= 5 && evaluationLastSymbol <= 9) evaluationCase = "\u043E\u0446\u0435\u043D\u043E\u043A";
         else if (evaluationLastSymbol == 1) evaluationCase = "\u043E\u0446\u0435\u043D\u043A\u0430";
         else evaluationCase = "\u043E\u0446\u0435\u043D\u043A\u0438";
@@ -833,12 +924,21 @@ function addCards() {
         discount.textContent = `-${product.discount}%`;
         addClass(discount, "product__discount");
         const addBtn = document.createElement("button");
-        addClass(addBtn, "icon-cart");
+        addClass(addBtn, "icon-cart", "add-to-cart");
         imgWrapper.append(productImg, quickViewBtn, discount);
         card.append(imgWrapper, discountPrice, price, discountSignature, productTitle, review, addBtn);
         addBtn.addEventListener("click", ()=>{
             const productCopy = Object.assign({}, product);
-            productsInTheCart.push(productCopy);
+            const idx = (0, _basket.CartState).productsInTheCart.findIndex((v)=>v.id === product.id);
+            if (idx !== -1) (0, _basket.CartState).counters[idx]++;
+            else {
+                (0, _basket.CartState).productsInTheCart.push(productCopy);
+                (0, _basket.CartState).counters.push(1);
+            }
+            (0, _basket.CartState).totalCost += Number(productCopy.price);
+            (0, _basket.CartState).totalItems++;
+            (0, _basket.updateTotalCost)();
+            (0, _header.basketBtn).setAttribute("data-product-count", (0, _basket.CartState).totalItems);
         });
         quickViewBtn.addEventListener("click", function(event) {
             event.stopPropagation();
@@ -862,7 +962,7 @@ function addCards() {
                 modalData.modalPhotosItemThree.style.display = "none";
             }
         });
-        return card;
+        return card; // Возвращаем элемент карточки
     }
     function createModalPhotosItem() {
         const modalPhotosItem = document.createElement("img");
@@ -961,96 +1061,255 @@ function addCards() {
             modalPhotosItemThree
         };
     }
-    const containerModalWindow = document.createElement("div");
-    containerModalWindow.classList.add("containerModalWindow");
-    root.append(containerModalWindow);
-    const modalWindow = document.createElement("div");
-    modalWindow.classList.add("modalWindow");
-    containerModalWindow.append(modalWindow);
-    const closeBtn = document.createElement("button");
-    closeBtn.classList.add("closeButton");
-    closeBtn.textContent = "x";
-    modalWindow.append(closeBtn);
-    const content = document.createElement("div");
-    content.setAttribute("id", "modal-content");
-    modalWindow.appendChild(content);
-    (0, _header.basketBtn).addEventListener("click", function() {
-        containerModalWindow.style.display = "block";
-        modalWindow.style.display = "block";
-    });
-    closeBtn.addEventListener("click", function() {
-        modalWindow.style.display = "none";
-        containerModalWindow.style.display = "none";
-        productsInTheCart.splice(0, productsInTheCart.length);
-    });
-    const ItemContainer = document.getElementById("modal-content");
-    let totalCost = 0;
-    let totalItems = 0;
-    (0, _header.basketBtn).addEventListener("click", function createItem(data) {
-        productsInTheCart.forEach((item)=>{
-            let itemId = item.id;
-            let containerForBasket = document.createElement("div");
-            addClass(containerForBasket, "container-for-el-in-basket");
-            const imageElement = document.createElement("img");
-            addClass(imageElement, "img-for-modal-basket");
-            imageElement.src = item.images;
-            const nameElement = document.createElement("h3");
-            addClass(nameElement, "name-el-basket");
-            nameElement.textContent = item.title;
-            const priceElement = document.createElement("p");
-            addClass(priceElement, "price-el-basket");
-            priceElement.textContent = item.price + " p.";
-            const deleteButton = document.createElement("button");
-            deleteButton.classList.add("deleteButton");
-            deleteButton.textContent = "\u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0438\u0437 \u043A\u043E\u0440\u0437\u0438\u043D\u044B";
-            deleteButton.addEventListener("click", function(g) {
-                containerForBasket.remove();
-                const indexToRemove = productsInTheCart.findIndex((item)=>item.id === itemId);
-                if (indexToRemove !== -1) {
-                    totalCost -= Number(item.price);
-                    totalItems--;
-                    updateTotalCost();
-                    productsInTheCart.splice(indexToRemove, 1);
-                }
-            });
-            containerForBasket.appendChild(imageElement);
-            containerForBasket.appendChild(nameElement);
-            containerForBasket.appendChild(priceElement);
-            containerForBasket.appendChild(deleteButton);
-            ItemContainer.appendChild(containerForBasket);
-            totalCost += Number(item.price);
-            totalItems++;
-            updateTotalCost();
-        });
-    });
-    function removeItem(itemId) {
-        const removedItem = productsInTheCart.find((item)=>item.id === itemId);
-        if (removedItem) {
-            totalCost -= Number(removedItem.price);
-            updateTotalCost();
-            productsInTheCart = productsInTheCart.filter((item)=>item.id !== itemId);
-            const itemElement = document.getElementById(itemId);
-            if (itemElement) itemElement.remove();
-        }
-    }
-    function updateTotalCost() {
-        totalCostElement.textContent = "\u041A \u043E\u0444\u043E\u0440\u043C\u043B\u0435\u043D\u0438\u044E " + totalItems + "\u0448\u0442., " + totalCost + " \u0440.";
-    }
-    var totalCostElement = document.querySelector(".totalCostEl");
-    if (!totalCostElement) {
-        totalCostElement = document.createElement("div");
-        totalCostElement.classList.add("totalCostEl");
-        ItemContainer.appendChild(totalCostElement);
-    }
-    var totalItemsElement = document.querySelector(".totalItemsEl");
-    if (!totalItemsElement) {
-        totalItemsElement = document.createElement("div");
-        totalItemsElement.classList.add("totalItemsEl");
-        ItemContainer.appendChild(totalItemsElement);
-    }
-    updateTotalCost();
 }
 exports.default = addCards;
+
+},{"./header":"gMwGB","./basket":"5Kfea","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5Kfea":[function(require,module,exports,__globalThis) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "updateTotalCost", ()=>updateTotalCost);
+parcelHelpers.export(exports, "CartState", ()=>CartState);
+parcelHelpers.export(exports, "OpenBasket", ()=>OpenBasket);
+var _header = require("./header");
+const btn = (0, _header.basketBtn);
+const CartState = {
+    productsInTheCart: [],
+    counters: [],
+    totalCost: 0,
+    totalItems: 0
+};
+btn.setAttribute("data-product-count", "0");
+//функция принимает элемент и набор классов, и добавляет эти классы к элементу
+function addClass(element, ...elemClasses) {
+    elemClasses.forEach((elemClass)=>element.classList.add(elemClass));
+}
+const containerModalWindow = document.createElement("div");
+containerModalWindow.classList.add("basket__modal");
+root.append(containerModalWindow);
+const modalWindow = document.createElement("div");
+modalWindow.classList.add("basket__modal-container");
+containerModalWindow.append(modalWindow);
+const closeBtn = document.createElement("button");
+closeBtn.classList.add("products__btn--closemodal");
+modalWindow.append(closeBtn);
+const content = document.createElement("div");
+content.setAttribute("id", "basket__modal-content");
+modalWindow.appendChild(content);
+btn.addEventListener("click", function() {
+    containerModalWindow.style.display = "block";
+    modalWindow.style.display = "block";
+});
+closeBtn.addEventListener("click", function() {
+    modalWindow.style.display = "none";
+    containerModalWindow.style.display = "none";
+    var cont = containerModalWindow.querySelector("#basket__modal-content");
+    if (cont) for (const child of cont.querySelectorAll(".basket__main-container"))cont.removeChild(child);
+});
+const ItemContainer = document.getElementById("basket__modal-content");
+btn.addEventListener("click", function createItem() {
+    if (CartState.productsInTheCart.length === 0) {
+        updateTotalCost();
+        const wrapBasket = document.createElement("div");
+        addClass(wrapBasket, "basket__wrap");
+        wrapBasket.style.display = "flex";
+        const emptyBasket = document.createElement("div");
+        addClass(emptyBasket, "basket__empty-basket");
+        emptyBasket.textContent = "\u041A\u043E\u0440\u0437\u0438\u043D\u0430 \u043F\u0443\u0441\u0442\u0430";
+        emptyBasket.style.display = "block";
+        modalWindow.appendChild(wrapBasket);
+        wrapBasket.appendChild(emptyBasket);
+    }
+    CartState.productsInTheCart.forEach((item, idx)=>{
+        const wrapBasket = document.querySelector(".basket__wrap");
+        wrapBasket.style.display = "none";
+        const emptyBasket = document.querySelector(".basket__empty-basket");
+        emptyBasket.style.display = "none";
+        let itemId = item.id;
+        const containerForBasket = document.createElement("div");
+        addClass(containerForBasket, "basket__main-container");
+        const containerImg = document.createElement("div");
+        addClass(containerImg, "basket__img-wrapper");
+        const imageElement = document.createElement("img");
+        addClass(imageElement, "basket__modal-img");
+        imageElement.src = item.images;
+        containerImg.appendChild(imageElement);
+        const containerInfo = document.createElement("div");
+        addClass(containerInfo, "basket__modal-description");
+        const nameElement = document.createElement("h3");
+        addClass(nameElement, "basket__modal-title");
+        nameElement.textContent = item.title;
+        const priceElement = document.createElement("p");
+        addClass(priceElement, "basket__modal-price");
+        priceElement.textContent = item.price + " p.";
+        const buyButton = document.createElement("button");
+        buyButton.classList.add("basket__btn-buy");
+        buyButton.textContent = "\u041A\u0443\u043F\u0438\u0442\u044C";
+        //создаем контейнер для счетчика
+        const counterContainer = document.createElement("div");
+        addClass(counterContainer, "counter");
+        const deleteButton = document.createElement("button");
+        deleteButton.classList.add("basket__btn-delete");
+        containerInfo.appendChild(nameElement);
+        containerInfo.appendChild(priceElement);
+        containerInfo.appendChild(buyButton);
+        containerInfo.appendChild(counterContainer);
+        containerInfo.appendChild(deleteButton);
+        //кнопка для увеличения
+        const buttonCounterOne = document.createElement("button");
+        buttonCounterOne.classList.add("button-count-plus");
+        buttonCounterOne.textContent = "+";
+        //элемент для отображения текущего количества
+        const count = document.createElement("input");
+        count.classList.add("button-count-number");
+        count.type = "number";
+        count.value = CartState.counters[idx]; //начальное значение
+        count.min = "1"; //минимальное значение (можно изменить по умолчанию)
+        //кнопка для уменьшения
+        const buttonCounterTwo = document.createElement("button");
+        buttonCounterTwo.classList.add("button-count-minus");
+        buttonCounterTwo.textContent = "-";
+        // Добавление кнопок и счетчика в контейнер
+        counterContainer.appendChild(buttonCounterTwo);
+        counterContainer.appendChild(count);
+        counterContainer.appendChild(buttonCounterOne);
+        // Функция обновления цены
+        function updatePrice() {
+            const quantity = parseInt(count.value) || 0;
+            const totalPrice = item.price * quantity;
+            priceElement.textContent = totalPrice + " p.";
+        }
+        // Функция обновления состояния кнопки
+        const updateButtonState = ()=>{
+            const currentCount = parseInt(count.value) || 0;
+            buttonCounterTwo.disabled = currentCount <= 1;
+            buttonCounterTwo.style.opacity = currentCount <= 1 ? "0.5" : "1";
+        };
+        // Обработчик нажатия на кнопку увеличения количества
+        buttonCounterOne.addEventListener("click", ()=>{
+            const index = CartState.productsInTheCart.findIndex((item)=>item.id === itemId);
+            count.value = parseInt(count.value) + 1;
+            CartState.counters[index]++; // Обновляем счетчик
+            CartState.totalItems++;
+            CartState.totalCost += Number(item.price);
+            btn.setAttribute("data-product-count", CartState.totalItems);
+            updatePrice();
+            updateButtonState();
+            updateTotalCost();
+        });
+        // Обработчик нажатия на кнопку уменьшения количества
+        buttonCounterTwo.addEventListener("click", ()=>{
+            const index = CartState.productsInTheCart.findIndex((item)=>item.id === itemId);
+            if (parseInt(count.value) > 1) {
+                count.value = parseInt(count.value) - 1;
+                CartState.counters[index]--; // Обновляем счетчик
+                CartState.totalItems--;
+                CartState.totalCost -= Number(item.price);
+                btn.setAttribute("data-product-count", CartState.totalItems);
+                updatePrice();
+                updateButtonState();
+                updateTotalCost();
+            }
+        });
+        // Обработчик нажатия на кнопку удаления товара
+        deleteButton.addEventListener("click", function() {
+            const quantityToRemove = parseInt(count.value) || 1; // Получаем количество товаров для удаления
+            removeItem(itemId, quantityToRemove); // Вызываем функцию удаления
+            containerForBasket.remove(); // Удаляем визуальный элемент
+        });
+        // Функция удаления товара
+        function removeItem(itemId, quantityToRemove) {
+            const indexToRemove = CartState.productsInTheCart.findIndex((item)=>item.id === itemId);
+            // Проверяем, существует ли товар в корзине
+            if (indexToRemove !== -1) {
+                const itemToRemove = CartState.productsInTheCart[indexToRemove];
+                CartState.counters[indexToRemove] -= quantityToRemove;
+                if (CartState.counters[indexToRemove] <= 0) {
+                    CartState.totalCost -= itemToRemove.price * quantityToRemove; // Уменьшаем общую стоимость (если удаляем все)
+                    CartState.productsInTheCart.splice(indexToRemove, 1); // Удаляем товар из корзины (если удаляем все)
+                    CartState.counters.splice(indexToRemove, 1);
+                } else CartState.totalCost -= quantityToRemove * itemToRemove.price; // Уменьшаем общую стоимость
+                CartState.totalItems -= quantityToRemove; // Уменьшаем общее количество товаров в корзине
+                CartState.totalItems = Math.max(CartState.totalItems, 0); // Не позволяем отрицательные значения
+                // Устанавливаем общую стоимость в ноль, если общее количество товаров стало равным нулю
+                if (CartState.totalItems === 0) CartState.totalCost = 0;
+                updateTotalCost(); // Обновляем отображение общей стоимости
+                updateBasketButton(); // Вызываем, чтобы обновить кнопки
+                updatePrice(); // Обновляем цену элемента
+                // Обновляем стоимость товара в визуальной корзине
+                const itemElement = document.getElementById(itemId);
+                if (itemElement) {
+                    const priceElement = itemElement.querySelector(".basket__modal-price");
+                    const quantity = itemToRemove.quantity;
+                    if (quantity > 0) priceElement.textContent = (quantity * price).toFixed(2) + " p."; // Обновляем цену товара
+                    else itemElement.remove(); // Удаляем элемент из визуальной корзины, если количество 0
+                }
+                // Проверяем, остались ли товары в корзине
+                if (CartState.productsInTheCart.length === 0) {
+                    wrapBasket.style.display = "flex";
+                    emptyBasket.style.display = "block";
+                    // Устанавливаем таймер для закрытия модального окна через 4 секунды
+                    setTimeout(()=>{
+                        containerModalWindow.style.display = "none";
+                    }, 4000);
+                } else showPopupMessage("\u0422\u043E\u0432\u0430\u0440\u044B \u0443\u0434\u0430\u043B\u0435\u043D\u044B \u0438\u0437 \u043A\u043E\u0440\u0437\u0438\u043D\u044B");
+            }
+        }
+        // Обработчик нажатия на кнопку "Купить"
+        buyButton.addEventListener("click", function() {
+            const currentQuantity = parseInt(count.value);
+            if (currentQuantity > 0) {
+                // Уменьшаем общее количество и стоимость на количество выбранного товара
+                CartState.totalItems -= currentQuantity;
+                CartState.totalCost -= currentQuantity * item.price;
+                updateTotalCost();
+                updateBasketButton(CartState.totalItems); // Вызываем, чтобы обновить кнопку
+                const indexToRemove = CartState.productsInTheCart.findIndex(// Удаляем товар из корзины
+                (product)=>product.id === itemId);
+                if (indexToRemove !== -1) CartState.productsInTheCart.splice(indexToRemove, 1);
+                // Удаляем товар из визуальной корзины
+                containerForBasket.remove();
+                showPopupMessage("\u0412\u0430\u0448 \u0442\u043E\u0432\u0430\u0440 \u0437\u0430\u043A\u0430\u0437\u0430\u043D");
+                if (CartState.productsInTheCart.length === 0) // Проверяем остались ли товары в корзине
+                // Устанавливаем таймер для закрытия модального окна через 4 секунды после отображения сообщения
+                setTimeout(()=>{
+                    containerModalWindow.style.display = "none";
+                }, 4000);
+            }
+        });
+        function showPopupMessage(message) {
+            const containerModalWindow = document.querySelector(".basket__modal");
+            // Создаем элемент для всплывающего сообщения
+            const popupMessage = document.createElement("div");
+            popupMessage.classList.add("basket__popup-message");
+            popupMessage.textContent = message;
+            // Добавляем сообщение в модальное окно
+            containerModalWindow.appendChild(popupMessage);
+            // Устанавливаем таймер для автоматического удаления сообщения через 3 секунды
+            setTimeout(()=>{
+                popupMessage.remove();
+            }, 3000);
+        }
+        containerForBasket.appendChild(containerImg);
+        containerForBasket.appendChild(containerInfo);
+        ItemContainer.appendChild(containerForBasket);
+        updateTotalCost();
+    });
+});
+let totalCostElement = document.querySelector(".basket__result");
+if (!totalCostElement) {
+    totalCostElement = document.createElement("div");
+    totalCostElement.classList.add("basket__result");
+    ItemContainer.appendChild(totalCostElement);
+}
+// Функция обновления общей стоимости
+function updateTotalCost() {
+    totalCostElement.textContent = "\u041A \u043E\u0444\u043E\u0440\u043C\u043B\u0435\u043D\u0438\u044E " + CartState.totalItems + "\u0448\u0442., " + CartState.totalCost + " \u0440.";
+}
+// Функция обновления кнопки корзины
+function updateBasketButton() {
+    btn.classList.add("basket-btn");
+    btn.setAttribute("data-product-count", CartState.totalItems.toString()); // Обновляем количество товаров
+}
 
 },{"./header":"gMwGB","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1WaLn":[function(require,module,exports,__globalThis) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");

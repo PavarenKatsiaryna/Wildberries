@@ -1,45 +1,52 @@
 import { basketBtn } from "./header";
+import { updateTotalCost, CartState } from "./basket";
+
 function addCards() {
   const body = document.querySelector("body");
   const root = document.getElementById("root");
+  
+  basketBtn.setAttribute("data-product-count", "0");
 
-  let productsInTheCart = [];
-
-  function addClass(element, elemClass) {
-    element.classList.add(elemClass);
+  //функция принимает элемент и набор классов, и добавляет эти классы к элементу
+  function addClass(element, ...elemClasses) {
+    elemClasses.forEach((elemClass) => element.classList.add(elemClass));
   }
-
+  // Создание секции для продуктов
   const section = document.createElement("section");
   addClass(section, "products");
   root.appendChild(section);
-
+  //Создание контейнера
   const container = document.createElement("div");
   addClass(container, "container");
   section.appendChild(container);
-
   const sectionTitle = document.createElement("h2");
   addClass(sectionTitle, "products__title");
   sectionTitle.textContent = "Хиты продаж";
   container.appendChild(sectionTitle);
-
+  //Создание модального окна
   const modalData = createModal();
   section.appendChild(modalData.modal);
-
+  //Создание контейнера для карточек продуктов
   const cardsContainer = document.createElement("div");
   addClass(cardsContainer, "products__container");
   container.appendChild(cardsContainer);
-
+  //Рендеринг карточек продуктов(на основе хранения либо локально, либо с удаленного источника)
   if (!localStorage.getItem("Products")) {
     fetchDataAndRenderCards();
   } else {
     renderCardsFromLocalStorage();
   }
-
+  //асинхронная функция для получения данных о товарах с API
   function fetchDataAndRenderCards() {
+    //метод fetch для выполнения HTTP-запроса на указанный URL, чтобы получить список продуктов
     fetch("https://api.escuelajs.co/api/v1/products")
+      //обработка ответа в формате json
       .then((response) => response.json())
+      //получаем массив товаров
       .then((products) => {
+        //методом slice берем только первые 25 товаров из полученного списка
         products = products.slice(0, 25);
+        //в цикле происходит модификация каждого продукта, где добавляются новые свойства
         products.forEach((product) => {
           product.discount = Math.floor(Math.random() * 80) + 5;
           product.discount_price = Math.ceil(
@@ -51,34 +58,38 @@ function addCards() {
           );
           product.article = Math.floor(10000000 + Math.random() * 90000000);
         });
+        //сохранение данных в локальное хранилище в виде строки JSON,удобно для повторного переиспользования
         localStorage.setItem("Products", JSON.stringify(products));
+        //отображение карточек на стр
         renderCards(products);
       })
+      //обработка ошибок
       .catch((error) => {
         console.error("Ошибка при получении данных:", error);
       });
   }
-
+  //получение данных из localStorage(извлечение строки, которая была
+  //сохранена под ключом "Products" и преобразование ее обратно в объект JS(в массив объектов продуктов)
   function renderCardsFromLocalStorage() {
     const products = JSON.parse(localStorage.getItem("Products"));
     renderCards(products);
   }
-
+  //вызов функции для рендеринга (берёт массив продуктов и отвечает за их отображение на странице)
   function renderCards(products) {
     products.forEach((product) => {
       const card = createCard(product);
       cardsContainer.appendChild(card);
     });
   }
-
+  //функция для создания карточки продукта
   function createCard(product) {
     const card = document.createElement("div");
     addClass(card, "product__card");
-
+    // Создаем основной контейнер для изображения продукта
     const imgWrapper = document.createElement("div");
     addClass(imgWrapper, "product__img-wrapper");
-
     const productImg = document.createElement("img");
+    // Используем то же изображение
     productImg.src = `${product.images[0]}`;
     addClass(productImg, "product__img");
 
@@ -96,7 +107,7 @@ function addCards() {
     quickViewBtn.addEventListener("mouseleave", showQuickBtn);
 
     const productTitle = document.createElement("h2");
-    productTitle.textContent = ` ${product.title}`;
+    productTitle.textContent =  `${product.title}`;
     productImg.alt = product.title;
     addClass(productTitle, "product__title");
 
@@ -109,6 +120,7 @@ function addCards() {
     let evaluationCase;
     let evaluationLastSymbol = product.evaluation % 10;
     let evaluationLastTwoSymbols = product.evaluation % 100;
+    //логика для определения формы слова "оценка"
     if (
       (evaluationLastTwoSymbols >= 11 && evaluationLastTwoSymbols <= 14) ||
       evaluationLastSymbol === 0 ||
@@ -146,7 +158,7 @@ function addCards() {
     addClass(discount, "product__discount");
 
     const addBtn = document.createElement("button");
-    addClass(addBtn, "icon-cart");
+    addClass(addBtn, "icon-cart", "add-to-cart");
 
     imgWrapper.append(productImg, quickViewBtn, discount);
 
@@ -162,9 +174,19 @@ function addCards() {
 
     addBtn.addEventListener("click", () => {
       const productCopy = Object.assign({}, product);
-      productsInTheCart.push(productCopy);
-    });
+      const idx = CartState.productsInTheCart.findIndex((v) => v.id === product.id);
+      if (idx !== -1) {
+        CartState.counters[idx]++;
+      } else {
+        CartState.productsInTheCart.push(productCopy);
+        CartState.counters.push(1);
+      }
+      CartState.totalCost += Number(productCopy.price);
+      CartState.totalItems++;
+      updateTotalCost();
+      basketBtn.setAttribute("data-product-count", CartState.totalItems);
 
+    });
     quickViewBtn.addEventListener("click", function (event) {
       event.stopPropagation();
       body.style.overflow = "hidden";
@@ -188,7 +210,7 @@ function addCards() {
       }
     });
 
-    return card;
+    return card; // Возвращаем элемент карточки
   }
 
   function createModalPhotosItem() {
@@ -272,7 +294,6 @@ function addCards() {
       modalWbWallet,
       modalQuickView
     );
-
     modalImgWrapper.addEventListener("mousemove", (event) => {
       const rect = modalImgWrapper.getBoundingClientRect();
       const x = event.clientX - rect.left;
@@ -325,115 +346,5 @@ function addCards() {
       modalPhotosItemThree,
     };
   }
-
-  const containerModalWindow = document.createElement("div");
-  containerModalWindow.classList.add("containerModalWindow");
-  root.append(containerModalWindow);
-  const modalWindow = document.createElement("div");
-  modalWindow.classList.add("modalWindow");
-  containerModalWindow.append(modalWindow);
-  const closeBtn = document.createElement("button");
-  closeBtn.classList.add("closeButton");
-  closeBtn.textContent = "x";
-  modalWindow.append(closeBtn);
-
-  const content = document.createElement("div");
-  content.setAttribute("id", "modal-content");
-  modalWindow.appendChild(content);
-
-  basketBtn.addEventListener("click", function () {
-    containerModalWindow.style.display = "block";
-    modalWindow.style.display = "block";
-  });
-  closeBtn.addEventListener("click", function () {
-    modalWindow.style.display = "none";
-    containerModalWindow.style.display = "none";
-    productsInTheCart.splice(0, productsInTheCart.length);
-  });
-
-  const ItemContainer = document.getElementById("modal-content");
-
-  let totalCost = 0;
-  let totalItems = 0;
-  basketBtn.addEventListener("click", function createItem(data) {
-    productsInTheCart.forEach((item) => {
-      let itemId = item.id;
-
-      let containerForBasket = document.createElement("div");
-      addClass(containerForBasket, "container-for-el-in-basket");
-      const imageElement = document.createElement("img");
-      addClass(imageElement, "img-for-modal-basket");
-      imageElement.src = item.images;
-      const nameElement = document.createElement("h3");
-      addClass(nameElement, "name-el-basket");
-      nameElement.textContent = item.title;
-      const priceElement = document.createElement("p");
-      addClass(priceElement, "price-el-basket");
-      priceElement.textContent = item.price + " p.";
-
-      const deleteButton = document.createElement("button");
-      deleteButton.classList.add("deleteButton");
-      deleteButton.textContent = "удалить из корзины";
-
-      deleteButton.addEventListener("click", function (g) {
-        containerForBasket.remove();
-
-        const indexToRemove = productsInTheCart.findIndex(
-          (item) => item.id === itemId
-        );
-        if (indexToRemove !== -1) {
-          totalCost -= Number(item.price);
-          totalItems--;
-          updateTotalCost();
-
-          productsInTheCart.splice(indexToRemove, 1);
-        }
-
-      });
-
-      containerForBasket.appendChild(imageElement);
-      containerForBasket.appendChild(nameElement);
-      containerForBasket.appendChild(priceElement);
-      containerForBasket.appendChild(deleteButton);
-      ItemContainer.appendChild(containerForBasket);
-
-      totalCost += Number(item.price);
-      totalItems++;
-      updateTotalCost();
-    });
-  });
-
-  function removeItem(itemId) {
-    const removedItem = productsInTheCart.find((item) => item.id === itemId);
-    if (removedItem) {
-      totalCost -= Number(removedItem.price);
-      updateTotalCost();
-      productsInTheCart = productsInTheCart.filter(
-        (item) => item.id !== itemId
-      );
-      const itemElement = document.getElementById(itemId);
-      if (itemElement) {
-        itemElement.remove();
-      }
-    }
-  }
-  function updateTotalCost() {
-    totalCostElement.textContent =
-      "К оформлению " + totalItems + "шт., " + totalCost + " р.";
-  }
-  var totalCostElement = document.querySelector(".totalCostEl");
-  if (!totalCostElement) {
-    totalCostElement = document.createElement("div");
-    totalCostElement.classList.add("totalCostEl");
-    ItemContainer.appendChild(totalCostElement);
-  }
-  var totalItemsElement = document.querySelector(".totalItemsEl");
-  if (!totalItemsElement) {
-    totalItemsElement = document.createElement("div");
-    totalItemsElement.classList.add("totalItemsEl");
-    ItemContainer.appendChild(totalItemsElement);
-  }
-
-  updateTotalCost();
 }
 export default addCards;
