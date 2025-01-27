@@ -30,7 +30,7 @@ function addCards() {
   const cardsContainer = document.createElement("div");
   addClass(cardsContainer, "products__container");
   container.appendChild(cardsContainer);
-  //Рендеринг карточек продуктов(на основе хранения либо локально, либо с удаленного источника)
+  //Рендеринг карточек продуктов
   if (!localStorage.getItem("Products")) {
     fetchDataAndRenderCards();
   } else {

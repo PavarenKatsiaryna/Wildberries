@@ -1,7 +1,7 @@
-import createHeader from "./components/header";
-import createCarousel from "./components/carousel";
-import addCards from "./components/cards";
-import createSearch from "./components/search";
+import createHeader from "./src/components/header";
+import createCarousel from "./src/components/carousel";
+import addCards from "./src/components/cards";
+import createSearch from "./src/components/search";
 
 
 

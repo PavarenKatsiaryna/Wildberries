@@ -98,7 +98,7 @@ $moderate-gray: #8e8d8d;
 }
 
 .basket-img {
-  background-image: url(../styles/pictures/basket.png);
+  background-image: url(./pictures/basket.png);
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -134,14 +134,14 @@ $moderate-gray: #8e8d8d;
 
   &.left {
     left: 10px;
-    background: #e9e9eb url(../styles/pictures/left-arrow.png) no-repeat center;
+    background: #e9e9eb url(./pictures/left-arrow.png) no-repeat center;
     width: 40px;
     height: 40px;
     margin-left: 10px;
   }
   &.right {
     right: 10px;
-    background: #e9e9eb url(../styles/pictures/right-arrow.png) no-repeat center;
+    background: #e9e9eb url(./pictures/right-arrow.png) no-repeat center;
     width: 40px;
     height: 40px;
     margin-right: 10px;
@@ -320,9 +320,9 @@ $clr: rgb(125, 58, 123);
     width: 75%;
     height: 75%;
     overflow: auto;
-    
+
     .basket__wrap {
-      display: flex;
+      // display: flex;
       justify-content: center;
       align-items: center;
       width: 100%;
@@ -406,7 +406,7 @@ $clr: rgb(125, 58, 123);
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
-    background-image: url(../styles/pictures/remove.png);
+    background-image: url(./pictures/remove.png);
     width: 37px;
     height: 37px;
   }
@@ -548,7 +548,7 @@ $clr: rgb(125, 58, 123);
 
 @font-face {
   font-family: "icomoon";
-  src: url("../icomoon/fonts/icomoon.ttf") format("truetype");
+  src: url("../../icomoon/fonts/icomoon.ttf") format("truetype");
 }
 
 .container {
@@ -563,10 +563,13 @@ $clr: rgb(125, 58, 123);
   bottom: 37%;
   font-size: 26px;
   color: #fff;
-  transition: font-size 0.1s;
+  transition: 0.2s all;
   cursor: pointer;
-}
 
+  &:active {
+    transform: scale(1.2);
+  }
+}
 .products {
   padding: 40px 0 50px;
   font-family: Arial, Helvetica, sans-serif;
@@ -652,7 +655,7 @@ $clr: rgb(125, 58, 123);
     position: relative;
     color: $moderate-gray;
     &::after {
-      content: url(../styles/pictures/icon-copy.svg);
+      content: url(./pictures/icon-copy.svg);
       margin-left: 5px;
       position: absolute;
     }

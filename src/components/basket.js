@@ -49,9 +49,21 @@ closeBtn.addEventListener("click", function () {
 const ItemContainer = document.getElementById("basket__modal-content");
 
 btn.addEventListener("click", function createItem() {
+  updateTotalCost();
+  const wrapBasket = document.createElement("div"); // Проверяем, существует ли уже wrapBasket
+  // Если wrapBasket не существует, создаём его
+  if (!wrapBasket) {
+    wrapBasket = document.createElement("div");
+    addClass(wrapBasket, "basket__wrap");
+    wrapBasket.style.display = "flex";
+    modalWindow.appendChild(wrapBasket);
+  } else {
+    // Если корзина ранее существовала, очищаем её
+    wrapBasket.textContent = "";
+  }
+  // Если корзина пуста
   if (CartState.productsInTheCart.length === 0) {
-    updateTotalCost()
-    const wrapBasket = document.createElement("div");
+    updateTotalCost();
     addClass(wrapBasket, "basket__wrap");
     wrapBasket.style.display = "flex";
     const emptyBasket = document.createElement("div");
@@ -60,12 +72,15 @@ btn.addEventListener("click", function createItem() {
     emptyBasket.style.display = "block";
     modalWindow.appendChild(wrapBasket);
     wrapBasket.appendChild(emptyBasket);
+    return; // Выход из функции, если корзина пуста
   }
+  // Если корзина не пуста, скрываем пустую корзину и отображаем товары
+  const emptyBasket = document.querySelector(".basket__empty-basket");
+  if (emptyBasket) {
+    emptyBasket.style.display = "none"; // Скрываем сообщение о пустой корзине
+  }
+  // Добавляем товары в корзину
   CartState.productsInTheCart.forEach((item, idx) => {
-    const wrapBasket = document.querySelector(".basket__wrap");
-    wrapBasket.style.display = "none";
-    const emptyBasket = document.querySelector(".basket__empty-basket");
-    emptyBasket.style.display = "none";
     let itemId = item.id;
     const containerForBasket = document.createElement("div");
     addClass(containerForBasket, "basket__main-container");
@@ -212,8 +227,6 @@ btn.addEventListener("click", function createItem() {
         }
         // Проверяем, остались ли товары в корзине
         if (CartState.productsInTheCart.length === 0) {
-          wrapBasket.style.display = "flex";
-          emptyBasket.style.display = "block";
           // Устанавливаем таймер для закрытия модального окна через 4 секунды
           setTimeout(() => {
             containerModalWindow.style.display = "none";
@@ -227,7 +240,7 @@ btn.addEventListener("click", function createItem() {
     // Обработчик нажатия на кнопку "Купить"
     buyButton.addEventListener("click", function () {
       const currentQuantity = parseInt(count.value);
-
+      
       if (currentQuantity > 0) {
         // Уменьшаем общее количество и стоимость на количество выбранного товара
         CartState.totalItems -= currentQuantity;
@@ -241,8 +254,11 @@ btn.addEventListener("click", function createItem() {
         if (indexToRemove !== -1) {
           CartState.productsInTheCart.splice(indexToRemove, 1);
         }
+
         // Удаляем товар из визуальной корзины
         containerForBasket.remove();
+        count.value = 0;
+        CartState.counters[indexToRemove] = 1;
         showPopupMessage("Ваш товар заказан");
         if (CartState.productsInTheCart.length === 0) {
           // Проверяем остались ли товары в корзине
@@ -274,7 +290,6 @@ btn.addEventListener("click", function createItem() {
     ItemContainer.appendChild(containerForBasket);
     updateTotalCost();
   });
-
 });
 
 let totalCostElement = document.querySelector(".basket__result");
